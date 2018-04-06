@@ -26,7 +26,7 @@ defmodule Event.MixProject do
   end
 
   def description do
-    "GenStage wrapper that simplifies event consumption and production"
+    "GenStage wrapper for simplifying event consumption and production"
   end
 
   def package do

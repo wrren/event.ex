@@ -39,6 +39,8 @@ end
 * `max_events` - The maximum number of events that the producer will buffer. Any events sent to the producer after this limit has been reached will be discarded. If synchronously sent, the producer will reply with `{:error, :queue_full}`
 * `dispatcher` - Specifies the GenStage dispatcher type for the producer, defaults to `GenStage.BroadcastDispatcher`
 
+All other options are passed to `GenStage.start_link`, allowing you to specify GenStage behaviour if required.
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
