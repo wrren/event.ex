@@ -12,7 +12,6 @@ defmodule Event.Sink do
 
   defmacro __using__(opts \\ []) do
     quote do
-      import Event.Sink, only: [sync_notify: 3, async_notify: 2]
       @behaviour Event.Sink
 
       @doc """
@@ -64,7 +63,25 @@ defmodule Event.Sink do
         {:noreply, [], state}
       end
 
-      defoverridable [init: 1, handle_call: 3, handle_cast: 2, handle_info: 2]
+      @doc """
+      Handle a code change
+      """
+      def code_change(_old_version, state, _extra), 
+        do: {:ok, state}
+      
+
+      def terminate(_reason, _state),
+        do: :ok
+
+      defoverridable [
+        init: 1, 
+        handle_call: 3, 
+        handle_cast: 2, 
+        handle_info: 2, 
+        handle_events: 3, 
+        code_change: 3, 
+        terminate: 2
+      ]
     end
   end
 
@@ -97,13 +114,16 @@ defmodule Event.Sink do
   Initialize event processor state
   """
   def init(opts) do
+    stage_opts = opts
+    |> Keyword.take([:subscribe_to])
+
     with  true <- function_exported?(opts[:module], :init, 1) do
-      case Kernel.apply(opts[:module], :init, opts[:args]) do
+      case Kernel.apply(opts[:module], :init, [opts[:args]]) do
         {:ok, state} ->
-          {:consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, opts}
+          {:consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
         {:ok, state, init_opts} ->
           opts = Keyword.merge(opts, init_opts)
-          {:consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, opts}
+          {:consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
         other ->
           other
       end
@@ -111,7 +131,7 @@ defmodule Event.Sink do
       {:stop, reason} ->
         {:stop, reason}
       false ->
-        {:consumer, %Event.Source{module: opts[:module], state: :ok, opts: opts}, opts}
+        {:consumer, %Event.Source{module: opts[:module], state: :ok, opts: opts}, stage_opts}
     end
   end
 

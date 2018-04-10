@@ -53,7 +53,7 @@ defmodule Event.Source do
       def terminate(_reason, _state),
         do: :ok
 
-      defoverridable [init: 1, handle_call: 3, handle_cast: 2, handle_info: 2, code_change: 2, terminate: 2]
+      defoverridable [init: 1, handle_call: 3, handle_cast: 2, handle_info: 2, code_change: 3, terminate: 2]
     end
   end
 
@@ -85,6 +85,13 @@ defmodule Event.Source do
   end
 
   @doc """
+  Get the event queue for the given source
+  """
+  def queue(source, timeout \\ 5_000) do
+    GenStage.call(source, :es_queue, timeout)
+  end
+
+  @doc """
   Send a message to the event source and await a response.
   """
   def call(source, call, timeout \\ 5_000) do
@@ -102,13 +109,16 @@ defmodule Event.Source do
   Initialize event source state
   """
   def init(opts) do
+    stage_opts = opts
+    |> Keyword.take([:demand, :buffer_size, :buffer_keep, :dispatcher])
+
     with true <- function_exported?(opts[:module], :init, 1) do
-      case Kernel.apply(opts[:module], :init, opts[:args]) do
+      case Kernel.apply(opts[:module], :init, [opts[:args]]) do
         {:ok, state} ->
-          {:producer, %Event.Source{module: opts[:module], state: state, opts: opts}, opts}
+          {:producer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
         {:ok, state, init_opts} ->
           opts = Keyword.merge(opts, init_opts)
-          {:producer, %Event.Source{module: opts[:module], state: state, opts: opts}, opts}
+          {:producer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
         other ->
           other
       end
@@ -116,7 +126,7 @@ defmodule Event.Source do
       {:stop, reason} ->
         {:stop, reason}
       false ->
-        {:producer, %Event.Source{module: opts[:module], state: :ok, opts: opts}, opts}
+        {:producer, %Event.Source{module: opts[:module], state: :ok, opts: opts}, stage_opts}
     end
   end
 
@@ -137,7 +147,10 @@ defmodule Event.Source do
   Handle a synchronous event notification
   """
   def handle_call({:es_notify, event}, from, state) do
-    maybe_dispatch({:sync, from, event}, state)
+    maybe_dispatch({:sync, from, [event]}, state)
+  end
+  def handle_call(:es_queue, _from, %{queue: queue} = state) do
+    {:reply, {:ok, queue}, [], state}
   end
   def handle_call(call, from, %{module: module, state: mstate} = state) do
     with true <- function_exported?(module, :handle_call, 3) do
@@ -167,7 +180,7 @@ defmodule Event.Source do
   Handle an asynchronous event notification
   """
   def handle_cast({:es_notify, event}, state) do
-    maybe_dispatch({:async, event}, state)
+    maybe_dispatch({:async, [event]}, state)
   end
   def handle_cast(call, %{module: module, state: mstate} = state) do
     with true <- function_exported?(module, :handle_cast, 2) do

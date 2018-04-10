@@ -8,6 +8,7 @@ defmodule Event.MixProject do
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      elixirc_paths: elixirc_paths(Mix.env),
       description: description(),
       package: package()
     ]
@@ -23,6 +24,13 @@ defmodule Event.MixProject do
     [
       {:gen_stage, "~> 0.13.1"}
     ]
+  end
+
+  def elixirc_paths(:test) do
+    ["lib", "test/support"]
+  end
+  def elixirc_paths(_) do
+    ["lib"]
   end
 
   def description do

@@ -10,7 +10,7 @@ defmodule Event.Processor do
 
   defmacro __using__(opts \\ []) do
     quote do
-      import Event.Processor, only: [sync_notify: 3, async_notify: 2]
+      import Event.Source
       @behaviour Event.Processor
 
       @doc """
@@ -62,7 +62,25 @@ defmodule Event.Processor do
         {:noreply, [], state}
       end
 
-      defoverridable [init: 1, handle_call: 3, handle_cast: 2, handle_info: 2]
+      @doc """
+      Handle a code change
+      """
+      def code_change(_old_version, state, _extra), 
+        do: {:ok, state}
+      
+
+      def terminate(_reason, _state),
+        do: :ok
+
+      defoverridable [
+        init: 1, 
+        handle_call: 3, 
+        handle_cast: 2, 
+        handle_info: 2, 
+        handle_events: 3, 
+        code_change: 3, 
+        terminate: 2
+      ]
     end
   end
 
@@ -110,13 +128,16 @@ defmodule Event.Processor do
   Initialize event processor state
   """
   def init(opts) do
+    stage_opts = opts
+    |> Keyword.take([:buffer_size, :buffer_keep, :dispatcher, :subscribe_to])
+
     with true <- function_exported?(opts[:module], :init, 1)do
-      case Kernel.apply(opts[:module], :init, opts[:args]) do
+      case Kernel.apply(opts[:module], :init, [opts[:args]]) do
         {:ok, state} ->
-          {:producer_consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, opts}
+          {:producer_consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
         {:ok, state, init_opts} ->
           opts = Keyword.merge(opts, init_opts)
-          {:producer_consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, opts}
+          {:producer_consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
         other ->
           other
       end
@@ -124,7 +145,7 @@ defmodule Event.Processor do
       {:stop, reason} ->
         {:stop, reason}
       false ->
-        {:producer_consumer, %Event.Source{module: opts[:module], state: :ok, opts: opts}, opts}
+        {:producer_consumer, %Event.Source{module: opts[:module], state: :ok, opts: opts}, stage_opts}
     end
   end
 
@@ -146,10 +167,17 @@ defmodule Event.Processor do
   """
   def handle_events(events, from, %{module: module, state: mstate} = state) do
     with true <- function_exported?(module, :handle_events, 3) do
-      Kernel.apply(module, :handle_events, [events, from, mstate])
+      case Kernel.apply(module, :handle_events, [events, from, mstate]) do
+        {:noreply, events, new_state} ->
+          {:noreply, events, %{state | state: new_state}}
+        {:noreply, events, new_state, extra} ->
+          {:noreply, events, %{state | state: new_state}, extra}
+        other ->
+          other
+      end
     else
       false ->
-        {:reply, :ok, [], state}
+        {:noreply, [], state}
     end
   end
 
@@ -238,6 +266,7 @@ defmodule Event.Processor do
         :ok
     end
   end
+  def terminate(_reason, _state), do: :ok
 
   #
   # Behaviour Callbacks
