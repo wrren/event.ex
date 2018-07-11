@@ -39,28 +39,28 @@ defmodule Event.Sink do
       Handle incoming events from an upstream producer
       """
       def handle_events(events, _from, state) do
-        {:noreply, events, state}
+        {:noreply, state}
       end
 
       @doc """
       Handle a synchronous call
       """
       def handle_call(_call, _from, state) do
-        {:reply, :ok, [], state}
+        {:reply, :ok, state}
       end
 
       @doc """
       Handle an asynchronous cast
       """
       def handle_cast(_cast, state) do
-        {:noreply, [], state}
+        {:noreply, state}
       end
 
       @doc """
       Default handler for incoming messages.
       """
       def handle_info(_info, state) do
-        {:noreply, [], state}
+        {:noreply, state}
       end
 
       @doc """
@@ -120,10 +120,10 @@ defmodule Event.Sink do
     with  true <- function_exported?(opts[:module], :init, 1) do
       case Kernel.apply(opts[:module], :init, [opts[:args]]) do
         {:ok, state} ->
-          {:consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
+          {:consumer, %Event.Sink{module: opts[:module], state: state, opts: opts}, stage_opts}
         {:ok, state, init_opts} ->
           opts = Keyword.merge(opts, init_opts)
-          {:consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
+          {:consumer, %Event.Sink{module: opts[:module], state: state, opts: opts}, stage_opts}
         other ->
           other
       end
@@ -131,7 +131,7 @@ defmodule Event.Sink do
       {:stop, reason} ->
         {:stop, reason}
       false ->
-        {:consumer, %Event.Source{module: opts[:module], state: :ok, opts: opts}, stage_opts}
+        {:consumer, %Event.Sink{module: opts[:module], state: :ok, opts: opts}, stage_opts}
     end
   end
 
@@ -156,7 +156,7 @@ defmodule Event.Sink do
       case Kernel.apply(module, :handle_events, [events, from, mstate]) do
         {:noreply, new_state} ->
           {:noreply, [], %{state | state: new_state}}
-        {:noreply, new_state, :hibernat} ->
+        {:noreply, new_state, :hibernate} ->
           {:noreply, [], %{state | state: new_state}, :hibernate}
         {:stop, reason, new_state} ->
           {:stop, reason, %{state | state: new_state}}

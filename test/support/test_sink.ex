@@ -5,6 +5,9 @@ defmodule Event.TestSink do
     Event.Sink.start_link(__MODULE__, [], subscribe_to: [source])
   end
 
+  def init(_),
+    do: {:ok, []}
+
   def handle_events(events, _from, state) do
     {:noreply, Enum.concat(events, state)}
   end
