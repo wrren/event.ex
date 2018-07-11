@@ -41,14 +41,14 @@ defmodule MySource do
   return once the event has been consumed or the timeout is reached
   """
   def sync_notify(event) do
-    Event.Producer.sync_notify(__MODULE__, event)
+    Event.Source.sync_notify(__MODULE__, event)
   end
 
   @doc """
   Asynchronously notify consumers that an event has occurred
   """
   def async_notify(event) do
-    Event.Producer.async_notify(__MODULE__, event)
+    Event.Source.async_notify(__MODULE__, event)
   end
 end
 ```
@@ -69,14 +69,14 @@ defmodule MyProcessor do
   return once the event has been consumed or the timeout is reached
   """
   def sync_notify(event) do
-    Event.Producer.sync_notify(__MODULE__, event)
+    Event.Processor.sync_notify(__MODULE__, event)
   end
 
   @doc """
   Asynchronously notify consumers that an event has occurred
   """
   def async_notify(event) do
-    Event.Producer.async_notify(__MODULE__, event)
+    Event.Processor.async_notify(__MODULE__, event)
   end
 
   @doc """
