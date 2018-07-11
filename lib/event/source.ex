@@ -256,6 +256,7 @@ defmodule Event.Source do
         :ok
     end
   end
+  def terminate(_reason, _state), do: :ok
 
   @doc """
   Conditionally enqueue and dispatch the given event based on options such as

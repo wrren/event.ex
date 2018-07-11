@@ -246,6 +246,7 @@ defmodule Event.Sink do
         :ok
     end
   end
+  def terminate(_reason, _state), do: :ok
 
   #
   # Behaviour Callbacks
