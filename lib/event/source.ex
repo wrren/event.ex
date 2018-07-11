@@ -61,12 +61,12 @@ defmodule Event.Source do
   Start an EventSource process.
   """
   def start_link(module, args, opts) do
-    opts = opts
+    sopts = opts
     |> Keyword.take([:max_events, :dispatcher])
     |> Keyword.merge([module: module, args: args])
     |> Keyword.put_new(:dispatcher, GenStage.BroadcastDispatcher)
 
-    GenStage.start_link(__MODULE__, opts, Keyword.drop(opts, [:max_events, :module, :args, :dispatcher]))
+    GenStage.start_link(__MODULE__, sopts, Keyword.drop(opts, [:max_events, :module, :args, :dispatcher]))
   end
 
   @doc """
