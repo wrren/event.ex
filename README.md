@@ -88,7 +88,7 @@ defmodule MyProcessor do
 end
 ```
 
-### Event Processor
+### Event Sink
 
 Variant of the GenStage `:consumer` stage type. Simplifies return signatures, removing the need to return any events, since it's
 the final stage in a pipeline.
