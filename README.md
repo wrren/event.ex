@@ -11,7 +11,7 @@ Add `event` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:event, "~> 0.1.0"}
+    {:event, "~> 0.1.3"}
   ]
 end
 ```
