@@ -23,7 +23,7 @@ defmodule Event.MixProject do
   defp deps do
     [
       {:gen_stage, "~> 0.13.1"},
-      {:ex_doc, ">= 0.0.0", only: :dev}
+      {:ex_doc, "~> 0.20.2", only: :dev}
     ]
   end
 
