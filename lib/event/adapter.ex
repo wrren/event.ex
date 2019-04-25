@@ -13,7 +13,7 @@ defmodule Event.Adapter do
   send them as messages to the receiver pid provided
   """
   def start_link(source, receiver) do
-    Event.Sink.start_link(__MODULE__, receiver, [subscribe_to: source])
+    Event.Sink.start_link(__MODULE__, receiver, [subscribe_to: [source]])
   end
 
   def init(receiver) do
