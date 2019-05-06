@@ -9,12 +9,14 @@ defmodule Event.Adapter do
   use Event.Sink
 
   @doc """
-  Start an Event Adapter that will receive events from the given source GenStage and
+  Start an Event Adapter that will receive events from the given source(s) GenStage and
   send them as messages to the receiver pid provided
   """
-  def start_link(source, receiver) do
-    Event.Sink.start_link(__MODULE__, receiver, [subscribe_to: [source]])
-  end
+  def start_link(sources, receiver) when is_list(sources),
+    do: Event.Sink.start_link(__MODULE__, receiver, [subscribe_to: sources])
+  def start_link(source, receiver),
+    do: Event.Sink.start_link(__MODULE__, receiver, [subscribe_to: [source]])
+
 
   def init(receiver) do
     Process.monitor(receiver)

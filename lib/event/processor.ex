@@ -4,6 +4,7 @@ defmodule Event.Processor do
   on to the next connected event handler(s)
   """
   use GenStage
+  require Logger
   defstruct module:     nil,
             state:      nil,
             opts:       nil
@@ -65,20 +66,20 @@ defmodule Event.Processor do
       @doc """
       Handle a code change
       """
-      def code_change(_old_version, state, _extra), 
+      def code_change(_old_version, state, _extra),
         do: {:ok, state}
-      
+
 
       def terminate(_reason, _state),
         do: :ok
 
       defoverridable [
-        init: 1, 
-        handle_call: 3, 
-        handle_cast: 2, 
-        handle_info: 2, 
-        handle_events: 3, 
-        code_change: 3, 
+        init: 1,
+        handle_call: 3,
+        handle_cast: 2,
+        handle_info: 2,
+        handle_events: 3,
+        code_change: 3,
         terminate: 2
       ]
     end
@@ -89,8 +90,8 @@ defmodule Event.Processor do
   """
   def start_link(module, args, opts) do
     GenStage.start_link(
-      __MODULE__, 
-      Keyword.merge(opts, [module: module, args: args]), 
+      __MODULE__,
+      Keyword.merge(opts, [module: module, args: args]),
       Keyword.drop(opts, [:module, :args])
     )
   end
@@ -139,6 +140,7 @@ defmodule Event.Processor do
           opts = Keyword.merge(opts, init_opts)
           {:producer_consumer, %Event.Source{module: opts[:module], state: state, opts: opts}, stage_opts}
         other ->
+          Logger.error "[Event.Processor] Unrecognized init response: #{inspect other}"
           other
       end
     else
@@ -173,6 +175,7 @@ defmodule Event.Processor do
         {:noreply, events, new_state, extra} ->
           {:noreply, events, %{state | state: new_state}, extra}
         other ->
+          Logger.error "[Event.Processor] Unrecognized handle_events response: #{inspect other}"
           other
       end
     else
@@ -192,7 +195,10 @@ defmodule Event.Processor do
       case Kernel.apply(module, :handle_call, [call, from, mstate]) do
         {:reply, reply, new_state} ->
           {:reply, reply, [], %{state | state: new_state}}
+        {:reply, reply, events, new_state} ->
+          {:reply, reply, events, %{state | state: new_state}}
         other ->
+          Logger.error "[Event.Processor] Unrecognized handle_call response: #{inspect other}"
           other
       end
     else
@@ -212,7 +218,10 @@ defmodule Event.Processor do
       case Kernel.apply(module, :handle_cast, [call, mstate]) do
         {:noreply, new_state} ->
           {:noreply, [], %{state | state: new_state}}
+        {:noreply, events, new_state} ->
+          {:noreply, events, %{state | state: new_state}}
         other ->
+          Logger.error "[Event.Processor] Unrecognized handle_cast response: #{inspect other}"
           other
       end
     else
@@ -229,7 +238,10 @@ defmodule Event.Processor do
       case Kernel.apply(module, :handle_info, [info, mstate]) do
         {:noreply, new_state} ->
           {:noreply, [], %{state | state: new_state}}
+        {:noreply, events, new_state} ->
+          {:noreply, events, %{state | state: new_state}}
         other ->
+          Logger.error "[Event.Processor] Unrecognized handle_cast response: #{inspect other}"
           other
       end
     else
@@ -308,7 +320,7 @@ defmodule Event.Processor do
   @callback code_change(old_vsn, state :: term, extra :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term} when old_vsn: term | {:down, term}
-  
+
   @optional_callbacks [
     handle_events: 3,
     code_change: 3,
